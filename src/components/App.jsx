@@ -16,9 +16,18 @@ export class App extends Component {
     page: 1,
     showModal: false,
     currentImage: null,
+    totalImages: null,
   };
 
   searchImages = ({ search }) => {
+    if (search.trim() === '') {
+      alert('Enter a search images or photos');
+      return
+    }
+    if (search === this.state.search) {
+      alert('Same request. Enter a new search images or photos');
+      return
+    }
     this.setState({ search, images: [], page: 1 });
   };
 
@@ -58,6 +67,7 @@ export class App extends Component {
       this.setState(({ images }) => ({
         images: [...images, ...data.hits],
       }));
+      this.setState({ totalImages: data.totalHits }); // add totalImages in state for button hiding if it length < 12
     } catch (error) {
       this.setState({ error: error.message });
     } finally {
@@ -66,7 +76,7 @@ export class App extends Component {
   }
 
   render() {
-    const { images, onLoading, error, showModal, currentImage } = this.state;
+    const { images, onLoading, error, showModal, currentImage, totalImages } = this.state;
     const { searchImages, loadMore, showImage, closeModal } = this;
 
     return (
@@ -94,9 +104,8 @@ export class App extends Component {
           </p>
         )}
         {onLoading && <Loader />}
-        {Boolean(images.length) && (
-          <Button text="Load more" loadMore={loadMore} />
-        )}
+        {Boolean(images.length) && totalImages > images.length &&
+            (<Button text="Load more" loadMore={loadMore} />)}
         {showModal && (
           <Modal closeModal={closeModal}>
             <ModalImage {...currentImage} />
