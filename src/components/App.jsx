@@ -18,14 +18,14 @@ export const App = () => {
   const [totalImages, setTotalImages] = useState(null);
 
   useEffect(() => {
-    if (searchState) {                     // checking if search not empty (true), then call fetch
+    if (searchState) {                        // checking if search not empty (true), then call fetch
       const fetchImages = async () => {
         try {
           setOnLoading(true);
           const data = await fetchApi(searchState, page);
           const images = data.hits;
           setImages(prevImages => [...prevImages, ...images]);
-          setTotalImages(data.totalHits);  // add totalImages in state for button hiding if it length < 12
+          setTotalImages(data.totalHits);     // add totalImages in state for button hiding if it length < 12
         } catch (error) {
           setError(error.message);
         } finally {
