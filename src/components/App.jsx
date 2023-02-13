@@ -1,5 +1,5 @@
-import { Component } from 'react';
-import { Searchbar } from './Searchbar/Searchbar.jsx';
+import { useState, useEffect, useCallback } from 'react';
+import  Searchbar  from  './Searchbar/Searchbar.jsx';
 import { ImageGallery } from './ImageGallery/ImageGallery.jsx';
 import { Loader } from './Loader/Loader.jsx';
 import { Button } from './Button/Button.jsx';
@@ -7,111 +7,97 @@ import { Modal } from './Modal/Modal.jsx';
 import { ModalImage } from './Modal/ModalImage.jsx';
 import { fetchApi } from '../api/fetchApi.js';
 
-export class App extends Component {
-  state = {
-    search: '',
-    images: [],
-    onLoading: false,
-    error: null,
-    page: 1,
-    showModal: false,
-    currentImage: null,
-    totalImages: null,
-  };
+export const App = () => {
+  const [searchState, setSearchState] = useState('');
+  const [images, setImages] = useState([]);
+  const [onLoading, setOnLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [showModal, setShowModal] = useState(false);
+  const [currentImage, setCurrentImage] = useState(null);
+  const [totalImages, setTotalImages] = useState(null);
 
-  searchImages = ({ search }) => {
-    if (search.trim() === '') {
-      alert('Enter a search images or photos');
-      return
+  useEffect(() => {
+    if (searchState) {                    // checking if search not empty (true), then call fetch
+      const fetchImages = async () => {
+        try {
+          setOnLoading(true);
+          const data = await fetchApi(searchState, page);
+          const images = data.hits;
+          setImages(prevImages => [...prevImages, ...images]);
+          setTotalImages(data.totalHits); // add totalImages in state for button hiding if it length < 12
+        } catch (error) {
+          setError(error.message);
+        } finally {
+          setOnLoading(false);
+        }
+      };
+      fetchImages();
     }
-    if (search === this.state.search) {
-      alert('Same request. Enter a new search images or photos');
-      return
-    }
-    this.setState({ search, images: [], page: 1 });
-  };
+  }, [searchState, page, setOnLoading, setImages, setTotalImages, setError]);
 
-  loadMore = () => {
-    this.setState(({ page }) => ({ page: page + 1 }));
-  };
+  const searchImages = useCallback(
+    ({ search }) => {
+      if (search.trim() === '') {
+        alert('Enter a search images or photos');
+        return;
+      }
+      if (search === searchState) {
+        alert('Same request. Enter a new search images or photos');
+        return;
+      }
+      setSearchState(search);
+      setImages([]);
+      setPage(1);
+    }, [searchState]);
 
-  showImage = ({ tags, largeImageURL }) => {
-    this.setState({
-      currentImage: {
-        tags,
-        largeImageURL,
-      },
-      showModal: true,
-    });
-  };
+  const showImage = useCallback(data => {
+    setCurrentImage(data);
+    setShowModal(true);
+  }, []);
 
-  closeModal = () => {
-    this.setState({
-      showModal: false,
-      currentImage: null,
-    });
-  };
+  const loadMore = useCallback(() => {
+    setPage(prevPage => prevPage + 1);
+  }, []);
 
-  componentDidUpdate(prevProps, prevState) {
-    const { search, page } = this.state;
-    if (prevState.search !== search || prevState.page !== page) {
-      this.fetchImages();
-    }
-  }
+  const closeModal = useCallback(() => {
+    setShowModal(false);
+    setCurrentImage(null);
+  }, []);
 
-  async fetchImages() {
-    try {
-      this.setState({ onLoading: true });
-      const { search, page } = this.state;
-      const data = await fetchApi(search, page);
-      this.setState(({ images }) => ({
-        images: [...images, ...data.hits],
-      }));
-      this.setState({ totalImages: data.totalHits }); // add totalImages in state for button hiding if it length < 12
-    } catch (error) {
-      this.setState({ error: error.message });
-    } finally {
-      this.setState({ onLoading: false });
-    }
-  }
-
-  render() {
-    const { images, onLoading, error, showModal, currentImage, totalImages } = this.state;
-    const { searchImages, loadMore, showImage, closeModal } = this;
-
-    return (
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr',
-          gridGap: '16px',
-          paddingBottom: '24px',
-          fontSize: 40,
-          color: '#010101',
-        }}
-      >
-        <Searchbar onSubmit={searchImages} />
-        <ImageGallery images={images} showImage={showImage} />
-        {error && (
-          <p
-            style={{
-              fontSize: '24px',
-              textAlign: 'center',
-              color: 'red',
-            }}
-          >
-            Something goes wrong. Please try again later.
-          </p>
-        )}
-        {onLoading && <Loader />}
-        {Boolean(images.length) && totalImages > images.length &&
-            (<Button text="Load more" loadMore={loadMore} />)}
-        {showModal && (
-          <Modal closeModal={closeModal}>
-            <ModalImage {...currentImage} />
-          </Modal>
-        )}
-      </div>
-    );
-  }
-}
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr',
+        gridGap: '16px',
+        paddingBottom: '24px',
+        fontSize: 40,
+        color: '#010101',
+      }}
+    >
+      <Searchbar onSubmit={searchImages} />
+      <ImageGallery images={images} showImage={showImage} />
+      {error && (
+        <p
+          style={{
+            fontSize: '24px',
+            textAlign: 'center',
+            color: 'red',
+          }}
+        >
+          Something goes wrong. Please try again later.
+        </p>
+      )}
+      {onLoading && <Loader />}
+      {Boolean(images.length) && totalImages > images.length && (
+        <Button text="Load more" loadMore={loadMore} />
+      )}
+      {showModal && (
+        <Modal closeModal={closeModal}>
+          <ModalImage {...currentImage} />
+        </Modal>
+      )}
+    </div>
+  );
+};
